@@ -9,10 +9,12 @@
       margin: 30px;
       background-color: #f9f9f9;
     }
+
     h1 {
       text-align: center;
       color: #333;
     }
+
     table {
       border-collapse: collapse;
       margin: auto;
@@ -20,90 +22,96 @@
       background-color: #fff;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+
     th, td {
       border: 1px solid #ddd;
       padding: 12px 15px;
       text-align: center;
     }
+
     th {
       background-color: #4CAF50;
       color: white;
     }
+
     tr:nth-child(even) { background-color: #f2f2f2; }
     tr:hover { background-color: #ddd; }
+
+    .items-row {
+      display: none;
+      background-color: #fefefe;
+    }
+
+    .items-cell {
+      text-align: left;
+      padding: 10px;
+      font-style: italic;
+    }
+
+    .clickable {
+      cursor: pointer;
+      font-weight: bold;
+      color: #4CAF50;
+    }
   </style>
 </head>
 <body>
   <h1>External Drive Dashboard</h1>
   <table id="driveTable">
-    <thead></thead>
+    <thead>
+      <tr>
+        <th>Drive</th>
+        <th>Free Space</th>
+        <th>Total Space</th>
+        <th>Last Checked</th>
+      </tr>
+    </thead>
     <tbody></tbody>
   </table>
 
-<script>
-  const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSK0qK_xqHeCfTWET7uBoBoiR5-ITRLTkRx_LNJTmzmYviynJtal5Q34SHNjG7W7Ov1BvBv7NDfVLpi/pub?output=csv";
+  <script>
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSK0qK_xqHeCfTWET7uBoBoiR5-ITRLTkRx_LNJTmzmYviynJtal5Q34SHNjG7W7Ov1BvBv7NDfVLpi/pub?output=csv";
 
-  fetch(sheetURL)
-    .then(response => response.text())
-    .then(data => {
-      const rows = data.trim().split('\n').map(row => row.split(','));
+    fetch(sheetURL)
+      .then(response => response.text())
+      .then(data => {
+        const rows = data.trim().split('\n').map(row => row.split(','));
+        const header = rows[0];
+        const tbody = document.querySelector('#driveTable tbody');
 
-      const thead = document.querySelector('#driveTable thead');
-      const tbody = document.querySelector('#driveTable tbody');
+        rows.slice(1).forEach((row, index) => {
+          const driveRow = document.createElement('tr');
+          driveRow.classList.add('clickable');
 
-      const headers = rows[0];
-
-      // Create table header
-      const headerRow = document.createElement('tr');
-      headers.forEach(header => {
-        const th = document.createElement('th');
-        th.textContent = header;
-        headerRow.appendChild(th);
-      });
-      thead.appendChild(headerRow);
-
-      // Create table rows
-      rows.slice(1).forEach(rowData => {
-        const row = document.createElement('tr');
-        rowData.forEach((cell, i) => {
-          if (headers[i] === 'Items') {
-            const itemsCell = document.createElement('td');
-            const toggleBtn = document.createElement('button');
-            toggleBtn.textContent = 'View';
-            toggleBtn.style.cursor = 'pointer';
-            toggleBtn.style.padding = '4px 10px';
-            toggleBtn.style.borderRadius = '4px';
-            toggleBtn.style.border = '1px solid #ccc';
-            toggleBtn.style.background = '#eee';
-
-            const detailDiv = document.createElement('div');
-            detailDiv.style.display = 'none';
-            detailDiv.style.marginTop = '5px';
-            detailDiv.style.fontSize = '0.9em';
-            detailDiv.style.textAlign = 'left';
-            detailDiv.textContent = cell;
-
-            toggleBtn.onclick = () => {
-              const isVisible = detailDiv.style.display === 'block';
-              detailDiv.style.display = isVisible ? 'none' : 'block';
-              toggleBtn.textContent = isVisible ? 'View' : 'Hide';
-            };
-
-            itemsCell.appendChild(toggleBtn);
-            itemsCell.appendChild(detailDiv);
-            row.appendChild(itemsCell);
-          } else {
+          // Main row
+          for (let i = 0; i < 4; i++) {
             const td = document.createElement('td');
-            td.textContent = cell;
-            row.appendChild(td);
+            td.textContent = row[i];
+            driveRow.appendChild(td);
           }
+
+          // Items row
+          const itemsRow = document.createElement('tr');
+          itemsRow.classList.add('items-row');
+          const itemsCell = document.createElement('td');
+          itemsCell.colSpan = 4;
+          itemsCell.classList.add('items-cell');
+
+          const items = row.slice(4).filter(Boolean).join(', ');
+          itemsCell.textContent = `📦 Items: ${items}`;
+          itemsRow.appendChild(itemsCell);
+
+          driveRow.addEventListener('click', () => {
+            itemsRow.style.display = itemsRow.style.display === 'table-row' ? 'none' : 'table-row';
+          });
+
+          tbody.appendChild(driveRow);
+          tbody.appendChild(itemsRow);
         });
-        tbody.appendChild(row);
+      })
+      .catch(error => {
+        document.body.innerHTML += `<p style="color:red; text-align:center;">Failed to load data: ${error}</p>`;
       });
-    })
-    .catch(error => {
-      document.body.innerHTML += `<p style="color:red; text-align:center;">Failed to load data: ${error}</p>`;
-    });
-</script>
+  </script>
 </body>
 </html>
