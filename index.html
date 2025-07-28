@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>External Drive Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      background: #f8f9fa;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    th {
+      background-color: #333;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+    .loading {
+      text-align: center;
+      font-size: 20px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+
+<h1>📦 External Drives Dashboard</h1>
+<div class="loading" id="loading">Loading data from Google Sheets...</div>
+
+<table id="driveTable" style="display: none;">
+  <thead>
+    <tr>
+      <th>Drive</th>
+      <th>Free Space</th>
+      <th>Total Space</th>
+      <th>Last Checked</th>
+      <th>Items</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody">
+  </tbody>
+</table>
+
+<script>
+  const sheetURL = https://docs.google.com/spreadsheets/d/e/2PACX-1vSK0qK_xqHeCfTWET7uBoBoiR5-ITRLTkRx_LNJTmzmYviynJtal5Q34SHNjG7W7Ov1BvBv7NDfVLpi/pub?gid=0&single=true&output=csv;
+
+  fetch(sheetURL)
+    .then(response => response.text())
+    .then(csvText => {
+      const rows = csvText.trim().split('\n');
+      const tableBody = document.getElementById('tableBody');
+
+      rows.slice(1).forEach(row => {
+        const cols = row.split(',');
+        const tr = document.createElement('tr');
+        cols.forEach(col => {
+          const td = document.createElement('td');
+          td.textContent = col;
+          tr.appendChild(td);
+        });
+        tableBody.appendChild(tr);
+      });
+
+      document.getElementById('driveTable').style.display = 'table';
+      document.getElementById('loading').style.display = 'none';
+    })
+    .catch(error => {
+      document.getElementById('loading').textContent = '⚠️ Failed to load data.';
+      console.error(error);
+    });
+</script>
+
+</body>
+</html>
