@@ -40,40 +40,70 @@
     <tbody></tbody>
   </table>
 
-  <script>
-    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSK0qK_xqHeCfTWET7uBoBoiR5-ITRLTkRx_LNJTmzmYviynJtal5Q34SHNjG7W7Ov1BvBv7NDfVLpi/pub?output=csv";
+<script>
+  const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSK0qK_xqHeCfTWET7uBoBoiR5-ITRLTkRx_LNJTmzmYviynJtal5Q34SHNjG7W7Ov1BvBv7NDfVLpi/pub?output=csv";
 
-    fetch(sheetURL)
-      .then(response => response.text())
-      .then(data => {
-        const rows = data.trim().split('\n').map(row => row.split(','));
+  fetch(sheetURL)
+    .then(response => response.text())
+    .then(data => {
+      const rows = data.trim().split('\n').map(row => row.split(','));
 
-        const thead = document.querySelector('#driveTable thead');
-        const tbody = document.querySelector('#driveTable tbody');
+      const thead = document.querySelector('#driveTable thead');
+      const tbody = document.querySelector('#driveTable tbody');
 
-        // Create table header
-        const headerRow = document.createElement('tr');
-        rows[0].forEach(header => {
-          const th = document.createElement('th');
-          th.textContent = header;
-          headerRow.appendChild(th);
-        });
-        thead.appendChild(headerRow);
+      const headers = rows[0];
 
-        // Create table body
-        rows.slice(1).forEach(row => {
-          const tr = document.createElement('tr');
-          row.forEach(cell => {
+      // Create table header
+      const headerRow = document.createElement('tr');
+      headers.forEach(header => {
+        const th = document.createElement('th');
+        th.textContent = header;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+
+      // Create table rows
+      rows.slice(1).forEach(rowData => {
+        const row = document.createElement('tr');
+        rowData.forEach((cell, i) => {
+          if (headers[i] === 'Items') {
+            const itemsCell = document.createElement('td');
+            const toggleBtn = document.createElement('button');
+            toggleBtn.textContent = 'View';
+            toggleBtn.style.cursor = 'pointer';
+            toggleBtn.style.padding = '4px 10px';
+            toggleBtn.style.borderRadius = '4px';
+            toggleBtn.style.border = '1px solid #ccc';
+            toggleBtn.style.background = '#eee';
+
+            const detailDiv = document.createElement('div');
+            detailDiv.style.display = 'none';
+            detailDiv.style.marginTop = '5px';
+            detailDiv.style.fontSize = '0.9em';
+            detailDiv.style.textAlign = 'left';
+            detailDiv.textContent = cell;
+
+            toggleBtn.onclick = () => {
+              const isVisible = detailDiv.style.display === 'block';
+              detailDiv.style.display = isVisible ? 'none' : 'block';
+              toggleBtn.textContent = isVisible ? 'View' : 'Hide';
+            };
+
+            itemsCell.appendChild(toggleBtn);
+            itemsCell.appendChild(detailDiv);
+            row.appendChild(itemsCell);
+          } else {
             const td = document.createElement('td');
             td.textContent = cell;
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
+            row.appendChild(td);
+          }
         });
-      })
-      .catch(error => {
-        document.body.innerHTML += `<p style="color:red; text-align:center;">Failed to load data: ${error}</p>`;
+        tbody.appendChild(row);
       });
-  </script>
+    })
+    .catch(error => {
+      document.body.innerHTML += `<p style="color:red; text-align:center;">Failed to load data: ${error}</p>`;
+    });
+</script>
 </body>
 </html>
