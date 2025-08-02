@@ -2,61 +2,55 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Drive Dashboard</title>
+  <title>External Drive Dashboard</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 30px;
-      background-color: #f9f9f9;
+      background-color: #f8f8f8;
+      margin: 40px;
     }
-
     h1 {
       text-align: center;
       color: #333;
     }
-
     table {
       border-collapse: collapse;
-      margin: auto;
       width: 90%;
-      background-color: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin: auto;
+      background-color: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-
     th, td {
+      padding: 14px 18px;
       border: 1px solid #ddd;
-      padding: 12px 15px;
       text-align: center;
     }
-
     th {
       background-color: #4CAF50;
       color: white;
     }
-
-    tr:nth-child(even) { background-color: #f2f2f2; }
-    tr:hover { background-color: #ddd; }
-
-    .items-row {
-      display: none;
-      background-color: #fefefe;
-    }
-
-    .items-cell {
-      text-align: left;
-      padding: 10px;
-      font-style: italic;
-    }
-
-    .clickable {
+    tr:hover {
+      background-color: #f5f5f5;
       cursor: pointer;
+    }
+    .subrow td {
+      background-color: #f0f0f0;
+      color: #444;
+      font-style: italic;
+      text-align: left;
+      padding-left: 50px;
+    }
+    .hidden {
+      display: none;
+    }
+    .highlight {
       font-weight: bold;
       color: #4CAF50;
     }
   </style>
 </head>
 <body>
-  <h1>External Drive Dashboard</h1>
+  <h1>📦 External Drive Dashboard</h1>
   <table id="driveTable">
     <thead>
       <tr>
@@ -75,42 +69,42 @@
     fetch(sheetURL)
       .then(response => response.text())
       .then(data => {
-        const rows = data.trim().split('\n').map(row => row.split(','));
-        const header = rows[0];
-        const tbody = document.querySelector('#driveTable tbody');
+        const rows = data.trim().split("\n").map(row => row.split(","));
 
-        rows.slice(1).forEach((row, index) => {
-          const driveRow = document.createElement('tr');
-          driveRow.classList.add('clickable');
+        const tbody = document.querySelector("#driveTable tbody");
+        const headers = rows[0];
+        const driveIndex = headers.indexOf("Drive");
+        const freeIndex = headers.indexOf("Free Space");
+        const totalIndex = headers.indexOf("Total Space");
+        const timeIndex = headers.indexOf("Last Checked");
+        const itemsIndex = headers.indexOf("Items");
 
-          // Main row
-          for (let i = 0; i < 4; i++) {
-            const td = document.createElement('td');
-            td.textContent = row[i];
-            driveRow.appendChild(td);
-          }
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
 
-          // Items row
-          const itemsRow = document.createElement('tr');
-          itemsRow.classList.add('items-row');
-          const itemsCell = document.createElement('td');
-          itemsCell.colSpan = 4;
-          itemsCell.classList.add('items-cell');
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="highlight">${row[driveIndex]}</td>
+            <td class="highlight">${row[freeIndex]}</td>
+            <td class="highlight">${row[totalIndex]}</td>
+            <td class="highlight">${row[timeIndex]}</td>
+          `;
 
-          const items = row.slice(4).filter(Boolean).join(', ');
-          itemsCell.textContent = `📦 Items: ${items}`;
-          itemsRow.appendChild(itemsCell);
+          const subTr = document.createElement("tr");
+          subTr.classList.add("subrow", "hidden");
+          const items = row[itemsIndex] ? row[itemsIndex].split("\\n").join("<br>") : "(No folders)";
+          subTr.innerHTML = `<td colspan="4">${items}</td>`;
 
-          driveRow.addEventListener('click', () => {
-            itemsRow.style.display = itemsRow.style.display === 'table-row' ? 'none' : 'table-row';
+          tr.addEventListener("click", () => {
+            subTr.classList.toggle("hidden");
           });
 
-          tbody.appendChild(driveRow);
-          tbody.appendChild(itemsRow);
-        });
+          tbody.appendChild(tr);
+          tbody.appendChild(subTr);
+        }
       })
       .catch(error => {
-        document.body.innerHTML += `<p style="color:red; text-align:center;">Failed to load data: ${error}</p>`;
+        document.body.innerHTML += `<p style="color:red; text-align:center;">Error loading data: ${error}</p>`;
       });
   </script>
 </body>
