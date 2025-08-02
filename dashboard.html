@@ -1,40 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Drive Dashboard</title>
+  <meta charset="UTF-8" />
+  <title>External Drive Dashboard</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f6f6f6;
+      background: #f7f7f7;
       padding: 30px;
-      max-width: 800px;
-      margin: auto;
     }
     h1 {
       text-align: center;
-      margin-bottom: 30px;
-      color: #222;
+      color: #333;
     }
-    .drive-card {
-      background-color: #fff;
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
+    .drive-box {
+      background: #fff;
+      margin: 15px auto;
+      width: 90%;
+      padding: 15px 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    .drive-label {
+    .drive-header {
+      font-size: 18px;
       font-weight: bold;
-      margin-top: 10px;
-      color: #444;
+      color: #2c3e50;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    ul {
+    .drive-header:hover {
+      color: #1abc9c;
+    }
+    .drive-details {
+      margin-top: 10px;
+      padding-left: 15px;
+      display: none;
+    }
+    .items-list {
+      margin: 10px 0;
+    }
+    .items-list li {
+      list-style: disc;
       margin-left: 20px;
-      margin-top: 5px;
     }
   </style>
 </head>
 <body>
+
   <h1>📦 External Drive Dashboard</h1>
   <div id="dashboard"></div>
 
@@ -44,46 +58,68 @@
     fetch(sheetURL)
       .then(res => res.text())
       .then(csv => {
-        const rows = csv.trim().split('\n').map(r => r.split(','));
-        const headers = rows[0];
-        const data = rows.slice(1);
+        const lines = csv.trim().split('\n');
+        const headers = lines[0].split(',');
 
+        const data = lines.slice(1).map(line => {
+          const cells = line.split(',');
+          return {
+            drive: cells[0].trim(),
+            item: cells[1]?.trim(),
+            free: cells[2]?.trim(),
+            total: cells[3]?.trim(),
+            checked: cells[4]?.trim()
+          };
+        });
+
+        const dashboard = document.getElementById('dashboard');
         const drives = {};
+
         data.forEach(row => {
-          const [drive, item, free, total, checked] = row.map(cell => cell.trim());
-          if (!drive && !item) return;
-
-          if (drive) {
-            if (!drives[drive]) {
-              drives[drive] = {
-                items: [],
-                freeSpace: free,
-                totalSpace: total,
-                lastChecked: checked
-              };
-            }
+          if (row.drive) {
+            drives[row.drive] = {
+              free: row.free,
+              total: row.total,
+              checked: row.checked,
+              items: row.item ? [row.item] : []
+            };
+          } else if (row.item && Object.keys(drives).length > 0) {
+            const lastDrive = Object.keys(drives).slice(-1)[0];
+            drives[lastDrive].items.push(row.item);
           }
-          const currentDrive = drive || Object.keys(drives).slice(-1)[0];
-          if (item) drives[currentDrive].items.push(item);
         });
 
-        const container = document.getElementById('dashboard');
-        Object.entries(drives).forEach(([drive, data]) => {
-          const div = document.createElement('div');
-          div.className = 'drive-card';
-          div.innerHTML = `
-            <div><span class="drive-label">Drive:</span> ${drive}</div>
-            <div><span class="drive-label">Items:</span></div>
-            <ul>${data.items.map(i => `<li>${i}</li>`).join('')}</ul>
-            <div><span class="drive-label">Free Space:</span> ${data.freeSpace}</div>
-            <div><span class="drive-label">Total Space:</span> ${data.totalSpace}</div>
-            <div><span class="drive-label">Last Checked:</span> ${data.lastChecked}</div>
+        for (const [drive, info] of Object.entries(drives)) {
+          const box = document.createElement('div');
+          box.className = 'drive-box';
+
+          const header = document.createElement('div');
+          header.className = 'drive-header';
+          header.textContent = drive;
+
+          const details = document.createElement('div');
+          details.className = 'drive-details';
+
+          const items = info.items.map(i => `<li>${i}</li>`).join('');
+          details.innerHTML = `
+            <ul class="items-list">${items}</ul>
+            <p><strong>Free Space:</strong> ${info.free}</p>
+            <p><strong>Total Space:</strong> ${info.total}</p>
+            <p><strong>Last Checked:</strong> ${info.checked}</p>
           `;
-          container.appendChild(div);
-        });
+
+          header.onclick = () => {
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+          };
+
+          box.appendChild(header);
+          box.appendChild(details);
+          dashboard.appendChild(box);
+        }
       })
       .catch(err => {
-        document.body.innerHTML += `<p style="color:red;">Failed to load data: ${err}</p>`;
+        document.getElementById('dashboard').innerHTML =
+          `<p style="color:red;">❌ Failed to load Google Sheet: ${err.message}</p>`;
       });
   </script>
 </body>
