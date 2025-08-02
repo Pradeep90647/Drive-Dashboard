@@ -1,146 +1,127 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <title>External Drive Dashboard</title>
+  <meta charset="UTF-8">
+  <title>Drive Dashboard</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f7f7f7;
-      padding: 30px;
+      margin: 30px;
+      background-color: #f9f9f9;
     }
     h1 {
       text-align: center;
       color: #333;
     }
-    #searchBar {
-      display: block;
-      margin: 0 auto 20px;
-      padding: 10px 15px;
-      width: 300px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    .drive-box {
-      background: #fff;
-      margin: 15px auto;
+    table {
+      border-collapse: collapse;
+      margin: auto;
       width: 90%;
-      padding: 15px 25px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .drive-header {
-      font-size: 18px;
-      font-weight: bold;
-      color: #2c3e50;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px 15px;
+      text-align: center;
     }
-    .drive-header:hover {
-      color: #1abc9c;
+    th {
+      background-color: #4CAF50;
+      color: white;
     }
-    .drive-details {
-      margin-top: 10px;
-      padding-left: 15px;
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    tr:hover { background-color: #ddd; }
+
+    .items-container {
       display: none;
+      text-align: left;
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 5px;
+      padding-left: 15px;
     }
-    .items-list {
-      margin: 10px 0;
-    }
-    .items-list li {
-      list-style: disc;
-      margin-left: 20px;
+
+    .clickable {
+      cursor: pointer;
+      color: #2c7be5;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-
-  <h1>📦 External Drive Dashboard</h1>
-  <input type="text" id="searchBar" placeholder="🔍 Search by drive or item..." />
-
-  <div id="dashboard"></div>
+  <h1>External Drive Dashboard</h1>
+  <table id="driveTable">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
 
   <script>
     const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSK0qK_xqHeCfTWET7uBoBoiR5-ITRLTkRx_LNJTmzmYviynJtal5Q34SHNjG7W7Ov1BvBv7NDfVLpi/pub?output=csv";
-    let driveElements = [];
 
     fetch(sheetURL)
-      .then(res => res.text())
-      .then(csv => {
-        const lines = csv.trim().split('\n');
-        const headers = lines[0].split(',');
+      .then(response => response.text())
+      .then(data => {
+        const rows = data.trim().split('\n').map(row => row.split(','));
+        const headers = rows[0];
+        const dataRows = rows.slice(1);
 
-        const data = lines.slice(1).map(line => {
-          const cells = line.split(',');
-          return {
-            drive: cells[0].trim(),
-            item: cells[1]?.trim(),
-            free: cells[2]?.trim(),
-            total: cells[3]?.trim(),
-            checked: cells[4]?.trim()
-          };
+        const thead = document.querySelector('#driveTable thead');
+        const tbody = document.querySelector('#driveTable tbody');
+
+        // Render headers
+        const headerRow = document.createElement('tr');
+        headers.slice(0, 4).forEach(header => {
+          const th = document.createElement('th');
+          th.textContent = header;
+          headerRow.appendChild(th);
         });
+        thead.appendChild(headerRow);
 
-        const dashboard = document.getElementById('dashboard');
-        const drives = {};
+        // Render each drive row
+        dataRows.forEach((row, index) => {
+          const tr = document.createElement('tr');
+          row.slice(0, 4).forEach(cell => {
+            const td = document.createElement('td');
+            td.textContent = cell;
+            tr.appendChild(td);
+          });
 
-        data.forEach(row => {
-          if (row.drive) {
-            drives[row.drive] = {
-              free: row.free,
-              total: row.total,
-              checked: row.checked,
-              items: row.item ? [row.item] : []
-            };
-          } else if (row.item && Object.keys(drives).length > 0) {
-            const lastDrive = Object.keys(drives).slice(-1)[0];
-            drives[lastDrive].items.push(row.item);
-          }
+          tbody.appendChild(tr);
+
+          // Add collapsible items row
+          const itemRow = document.createElement('tr');
+          const itemCell = document.createElement('td');
+          itemCell.colSpan = 4;
+
+          const itemsList = row[4] ? row[4].split('\n') : [];
+          const toggle = document.createElement('div');
+          toggle.className = 'clickable';
+          toggle.textContent = '📁 Show Items';
+
+          const itemsContainer = document.createElement('div');
+          itemsContainer.className = 'items-container';
+
+          itemsList.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.textContent = `• ${item}`;
+            itemsContainer.appendChild(itemDiv);
+          });
+
+          toggle.addEventListener('click', () => {
+            const visible = itemsContainer.style.display === 'block';
+            itemsContainer.style.display = visible ? 'none' : 'block';
+            toggle.textContent = visible ? '📁 Show Items' : '📂 Hide Items';
+          });
+
+          itemCell.appendChild(toggle);
+          itemCell.appendChild(itemsContainer);
+          itemRow.appendChild(itemCell);
+          tbody.appendChild(itemRow);
         });
-
-        for (const [drive, info] of Object.entries(drives)) {
-          const box = document.createElement('div');
-          box.className = 'drive-box';
-          box.dataset.drive = drive.toLowerCase();
-          box.dataset.items = info.items.join(',').toLowerCase();
-
-          const header = document.createElement('div');
-          header.className = 'drive-header';
-          header.textContent = drive;
-
-          const details = document.createElement('div');
-          details.className = 'drive-details';
-
-          const items = info.items.map(i => `<li>${i}</li>`).join('');
-          details.innerHTML = `
-            <ul class="items-list">${items}</ul>
-            <p><strong>Free Space:</strong> ${info.free}</p>
-            <p><strong>Total Space:</strong> ${info.total}</p>
-            <p><strong>Last Checked:</strong> ${info.checked}</p>
-          `;
-
-          header.onclick = () => {
-            details.style.display = details.style.display === 'none' ? 'block' : 'none';
-          };
-
-          box.appendChild(header);
-          box.appendChild(details);
-          dashboard.appendChild(box);
-          driveElements.push(box);
-        }
+      })
+      .catch(error => {
+        document.body.innerHTML += `<p style="color:red; text-align:center;">Failed to load data: ${error}</p>`;
       });
-
-    // 🔍 Search functionality
-    document.getElementById('searchBar').addEventListener('input', function () {
-      const q = this.value.toLowerCase();
-      driveElements.forEach(box => {
-        const match = box.dataset.drive.includes(q) || box.dataset.items.includes(q);
-        box.style.display = match ? 'block' : 'none';
-      });
-    });
   </script>
 </body>
 </html>
