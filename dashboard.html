@@ -1,95 +1,90 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Drive Monitor Dashboard</title>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <title>Drive Dashboard</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f6f8fa;
+      background-color: #f6f6f6;
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
     }
-    h2 {
+    h1 {
       text-align: center;
+      margin-bottom: 30px;
+      color: #222;
     }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      background: white;
+    .drive-card {
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
     }
-    th, td {
-      padding: 12px;
-      border: 1px solid #ddd;
-      text-align: left;
+    .drive-label {
+      font-weight: bold;
+      margin-top: 10px;
+      color: #444;
     }
-    th {
-      background-color: #4285f4;
-      color: white;
-    }
-    input[type="text"] {
-      margin: 10px 0;
-      padding: 8px;
-      width: 100%;
-      font-size: 16px;
-    }
-    .footer {
-      text-align: center;
-      font-size: 12px;
-      color: #666;
-      margin-top: 20px;
+    ul {
+      margin-left: 20px;
+      margin-top: 5px;
     }
   </style>
 </head>
 <body>
-  <h2>📊 External Drive Monitor</h2>
-  <input type="text" id="searchBox" placeholder="Search drives..." onkeyup="filterTable()">
-
-  <table id="driveTable">
-    <thead>
-      <tr>
-        <th>Drive Name</th>
-        <th>Free Space</th>
-        <th>Total Space</th>
-        <th>Last Updated</th>
-        <th>Items</th>
-      </tr>
-    </thead>
-    <tbody id="dataBody"></tbody>
-  </table>
-
-  <div class="footer">Built by Pradeep</div>
+  <h1>📦 External Drive Dashboard</h1>
+  <div id="dashboard"></div>
 
   <script>
-    const SHEET_ID = "YOUR_GOOGLE_SHEET_ID_HERE";
-    const SHEET_NAME = "Sheet1";
-    const API_KEY = "YOUR_GOOGLE_API_KEY_HERE";
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSK0qK_xqHeCfTWET7uBoBoiR5-ITRLTkRx_LNJTmzmYviynJtal5Q34SHNjG7W7Ov1BvBv7NDfVLpi/pub?output=csv";
 
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${1Y75aoCzK-ln1RefEAFFcusuB5qNabRu_dQ1VsbZEE1k}/values/${SHEET_NAME}?key=${AIzaSyA7nij1fpjO_M2xV7RD9hLrFG1Nar5dJzE}`;
+    fetch(sheetURL)
+      .then(res => res.text())
+      .then(csv => {
+        const rows = csv.trim().split('\n').map(r => r.split(','));
+        const headers = rows[0];
+        const data = rows.slice(1);
 
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        const rows = data.values;
-        const tbody = document.getElementById("dataBody");
-        for (let i = 1; i < rows.length; i++) {
-          const tr = document.createElement("tr");
-          rows[i].forEach(cell => {
-            const td = document.createElement("td");
-            td.textContent = cell;
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
-        }
+        const drives = {};
+        data.forEach(row => {
+          const [drive, item, free, total, checked] = row.map(cell => cell.trim());
+          if (!drive && !item) return;
+
+          if (drive) {
+            if (!drives[drive]) {
+              drives[drive] = {
+                items: [],
+                freeSpace: free,
+                totalSpace: total,
+                lastChecked: checked
+              };
+            }
+          }
+          const currentDrive = drive || Object.keys(drives).slice(-1)[0];
+          if (item) drives[currentDrive].items.push(item);
+        });
+
+        const container = document.getElementById('dashboard');
+        Object.entries(drives).forEach(([drive, data]) => {
+          const div = document.createElement('div');
+          div.className = 'drive-card';
+          div.innerHTML = `
+            <div><span class="drive-label">Drive:</span> ${drive}</div>
+            <div><span class="drive-label">Items:</span></div>
+            <ul>${data.items.map(i => `<li>${i}</li>`).join('')}</ul>
+            <div><span class="drive-label">Free Space:</span> ${data.freeSpace}</div>
+            <div><span class="drive-label">Total Space:</span> ${data.totalSpace}</div>
+            <div><span class="drive-label">Last Checked:</span> ${data.lastChecked}</div>
+          `;
+          container.appendChild(div);
+        });
+      })
+      .catch(err => {
+        document.body.innerHTML += `<p style="color:red;">Failed to load data: ${err}</p>`;
       });
-
-    function filterTable() {
-      const input = document.getElementById("searchBox").value.toLowerCase();
-      const rows = document.querySelectorAll("#driveTable tbody tr");
-      rows.forEach(row => {
-        const match = row.textContent.toLowerCase().includes(input);
-        row.style.display = match ? "" : "none";
-      });
-    }
   </script>
 </body>
 </html>
