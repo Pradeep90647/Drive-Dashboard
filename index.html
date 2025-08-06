@@ -6,8 +6,8 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f8f8f8;
-      margin: 40px;
+      margin: 30px;
+      background-color: #f9f9f9;
     }
     h1 {
       text-align: center;
@@ -15,51 +15,33 @@
     }
     table {
       border-collapse: collapse;
-      width: 90%;
       margin: auto;
-      background-color: white;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      width: 90%;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     th, td {
-      padding: 14px 18px;
       border: 1px solid #ddd;
+      padding: 12px 15px;
       text-align: center;
     }
     th {
       background-color: #4CAF50;
       color: white;
     }
-    tr:hover {
-      background-color: #f5f5f5;
-      cursor: pointer;
-    }
-    .subrow td {
-      background-color: #f0f0f0;
-      color: #444;
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    tr:hover { background-color: #ddd; }
+    .item-cell {
       font-style: italic;
+      color: #555;
       text-align: left;
-      padding-left: 50px;
-    }
-    .hidden {
-      display: none;
-    }
-    .highlight {
-      font-weight: bold;
-      color: #4CAF50;
     }
   </style>
 </head>
 <body>
   <h1>📦 External Drive Dashboard</h1>
   <table id="driveTable">
-    <thead>
-      <tr>
-        <th>Drive</th>
-        <th>Free Space</th>
-        <th>Total Space</th>
-        <th>Last Checked</th>
-      </tr>
-    </thead>
+    <thead></thead>
     <tbody></tbody>
   </table>
 
@@ -69,42 +51,68 @@
     fetch(sheetURL)
       .then(response => response.text())
       .then(data => {
-        const rows = data.trim().split("\n").map(row => row.split(","));
+        const rows = data.trim().split('\n').map(row => row.split(','));
 
-        const tbody = document.querySelector("#driveTable tbody");
-        const headers = rows[0];
-        const driveIndex = headers.indexOf("Drive");
-        const freeIndex = headers.indexOf("Free Space");
-        const totalIndex = headers.indexOf("Total Space");
-        const timeIndex = headers.indexOf("Last Checked");
-        const itemsIndex = headers.indexOf("Items");
+        const thead = document.querySelector('#driveTable thead');
+        const tbody = document.querySelector('#driveTable tbody');
 
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
+        // Create table header
+        const headerRow = document.createElement('tr');
+        rows[0].forEach(header => {
+          const th = document.createElement('th');
+          th.textContent = header;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
 
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td class="highlight">${row[driveIndex]}</td>
-            <td class="highlight">${row[freeIndex]}</td>
-            <td class="highlight">${row[totalIndex]}</td>
-            <td class="highlight">${row[timeIndex]}</td>
-          `;
+        // Remember last non-empty drive info
+        let lastDrive = "", lastFree = "", lastTotal = "", lastChecked = "";
+        rows.slice(1).forEach(row => {
+          const [drive, item, free, total, checked] = row;
 
-          const subTr = document.createElement("tr");
-          subTr.classList.add("subrow", "hidden");
-          const items = row[itemsIndex] ? row[itemsIndex].split("\\n").join("<br>") : "(No folders)";
-          subTr.innerHTML = `<td colspan="4">${items}</td>`;
+          const driveVal = drive || lastDrive;
+          const freeVal = free || lastFree;
+          const totalVal = total || lastTotal;
+          const checkedVal = checked || lastChecked;
 
-          tr.addEventListener("click", () => {
-            subTr.classList.toggle("hidden");
-          });
+          if (drive) lastDrive = drive;
+          if (free) lastFree = free;
+          if (total) lastTotal = total;
+          if (checked) lastChecked = checked;
+
+          const tr = document.createElement('tr');
+
+          // Drive cell (show only when drive name present)
+          const tdDrive = document.createElement('td');
+          tdDrive.textContent = drive ? drive : "";
+          tr.appendChild(tdDrive);
+
+          // Item cell (italic sub-category)
+          const tdItem = document.createElement('td');
+          tdItem.textContent = item;
+          tdItem.classList.add("item-cell");
+          tr.appendChild(tdItem);
+
+          // Free Space
+          const tdFree = document.createElement('td');
+          tdFree.textContent = freeVal;
+          tr.appendChild(tdFree);
+
+          // Total Space
+          const tdTotal = document.createElement('td');
+          tdTotal.textContent = totalVal;
+          tr.appendChild(tdTotal);
+
+          // Last Checked
+          const tdChecked = document.createElement('td');
+          tdChecked.textContent = checkedVal;
+          tr.appendChild(tdChecked);
 
           tbody.appendChild(tr);
-          tbody.appendChild(subTr);
-        }
+        });
       })
       .catch(error => {
-        document.body.innerHTML += `<p style="color:red; text-align:center;">Error loading data: ${error}</p>`;
+        document.body.innerHTML += `<p style="color:red; text-align:center;">Failed to load data: ${error}</p>`;
       });
   </script>
 </body>
