@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Drive Dashboard</title>
+  <title>📦 External Drive Dashboard</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,7 +16,7 @@
     table {
       border-collapse: collapse;
       margin: auto;
-      width: 90%;
+      width: 95%;
       background-color: #fff;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
@@ -30,33 +30,64 @@
       color: white;
     }
     tr:nth-child(even) { background-color: #f2f2f2; }
-    tr:hover { background-color: #ddd; }
+    tr:hover { background-color: #e8f5e9; }
 
-    .items-container {
-      display: none;
+    .sub-item {
+      font-style: italic;
+      color: #555;
+      background-color: #f7f7f7;
       text-align: left;
-      font-size: 0.9em;
-      color: #666;
-      margin-top: 5px;
-      padding-left: 15px;
     }
 
-    .clickable {
-      cursor: pointer;
-      color: #2c7be5;
+    .folder-icon {
+      margin-right: 6px;
+      color: #4CAF50;
+    }
+
+    .progress-container {
+      width: 100px;
+      height: 10px;
+      background-color: #ddd;
+      border-radius: 5px;
+      overflow: hidden;
+      margin: auto;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background-color: #4CAF50;
+    }
+
+    .highlight {
+      color: #4CAF50;
       font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h1>External Drive Dashboard</h1>
+  <h1>📦 External Drive Dashboard</h1>
   <table id="driveTable">
-    <thead></thead>
+    <thead>
+      <tr>
+        <th>Drive</th>
+        <th>Items</th>
+        <th>Free Space</th>
+        <th>Total Space</th>
+        <th>Last Checked</th>
+      </tr>
+    </thead>
     <tbody></tbody>
   </table>
 
   <script>
     const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSK0qK_xqHeCfTWET7uBoBoiR5-ITRLTkRx_LNJTmzmYviynJtal5Q34SHNjG7W7Ov1BvBv7NDfVLpi/pub?output=csv";
+
+    function parseSize(sizeStr) {
+      if (!sizeStr) return 0;
+      const size = parseFloat(sizeStr);
+      if (sizeStr.includes("TB")) return size * 1000;
+      return size; // GB
+    }
 
     fetch(sheetURL)
       .then(response => response.text())
@@ -65,58 +96,58 @@
         const headers = rows[0];
         const dataRows = rows.slice(1);
 
-        const thead = document.querySelector('#driveTable thead');
-        const tbody = document.querySelector('#driveTable tbody');
+        const tbody = document.querySelector("#driveTable tbody");
+        let lastDrive = "", lastFree = "", lastTotal = "", lastChecked = "";
 
-        // Render headers
-        const headerRow = document.createElement('tr');
-        headers.slice(0, 4).forEach(header => {
-          const th = document.createElement('th');
-          th.textContent = header;
-          headerRow.appendChild(th);
-        });
-        thead.appendChild(headerRow);
+        dataRows.forEach(row => {
+          const rowData = Object.fromEntries(headers.map((h, i) => [h.trim(), row[i]?.trim() || ""]));
+          const isNewDrive = rowData["Drive"] && rowData["Drive"] !== lastDrive;
 
-        // Render each drive row
-        dataRows.forEach((row, index) => {
           const tr = document.createElement('tr');
-          row.slice(0, 4).forEach(cell => {
-            const td = document.createElement('td');
-            td.textContent = cell;
-            tr.appendChild(td);
-          });
+          const tdDrive = document.createElement('td');
+          const tdItem = document.createElement('td');
+          const tdFree = document.createElement('td');
+          const tdTotal = document.createElement('td');
+          const tdChecked = document.createElement('td');
 
+          // Drive column
+          tdDrive.textContent = isNewDrive ? rowData["Drive"] : "";
+          tdDrive.className = isNewDrive ? "highlight" : "";
+
+          // Item with icon
+          tdItem.innerHTML = `<span class="folder-icon">📁</span><span class="sub-item">${rowData["Items"]}</span>`;
+
+          // Free space
+          tdFree.innerHTML = isNewDrive ? `<span class="highlight">${rowData["Free Space"]}</span>` : "";
+
+          // Total space + progress bar
+          if (isNewDrive) {
+            const total = parseSize(rowData["Total Space"]);
+            const free = parseSize(rowData["Free Space"]);
+            const usedPercent = total > 0 ? Math.round(((total - free) / total) * 100) : 0;
+
+            const bar = `
+              <div class="progress-container">
+                <div class="progress-bar" style="width: ${usedPercent}%"></div>
+              </div>
+              <div class="highlight">${rowData["Total Space"]}</div>
+            `;
+            tdTotal.innerHTML = bar;
+          }
+
+          // Last Checked
+          tdChecked.innerHTML = isNewDrive ? `<span class="highlight">${rowData["Last Checked"]}</span>` : "";
+
+          tr.append(tdDrive, tdItem, tdFree, tdTotal, tdChecked);
           tbody.appendChild(tr);
 
-          // Add collapsible items row
-          const itemRow = document.createElement('tr');
-          const itemCell = document.createElement('td');
-          itemCell.colSpan = 4;
-
-          const itemsList = row[4] ? row[4].split('\n') : [];
-          const toggle = document.createElement('div');
-          toggle.className = 'clickable';
-          toggle.textContent = '📁 Show Items';
-
-          const itemsContainer = document.createElement('div');
-          itemsContainer.className = 'items-container';
-
-          itemsList.forEach(item => {
-            const itemDiv = document.createElement('div');
-            itemDiv.textContent = `• ${item}`;
-            itemsContainer.appendChild(itemDiv);
-          });
-
-          toggle.addEventListener('click', () => {
-            const visible = itemsContainer.style.display === 'block';
-            itemsContainer.style.display = visible ? 'none' : 'block';
-            toggle.textContent = visible ? '📁 Show Items' : '📂 Hide Items';
-          });
-
-          itemCell.appendChild(toggle);
-          itemCell.appendChild(itemsContainer);
-          itemRow.appendChild(itemCell);
-          tbody.appendChild(itemRow);
+          // update last values
+          if (isNewDrive) {
+            lastDrive = rowData["Drive"];
+            lastFree = rowData["Free Space"];
+            lastTotal = rowData["Total Space"];
+            lastChecked = rowData["Last Checked"];
+          }
         });
       })
       .catch(error => {
