@@ -80,7 +80,7 @@
 
         const tbody = document.querySelector('#driveTable tbody');
 
-        rows.slice(1).forEach((row, i) => {
+        rows.slice(1).forEach(row => {
           const driveRow = document.createElement('tr');
           driveRow.classList.add('drive-row');
 
@@ -97,11 +97,14 @@
           const itemCell = document.createElement('td');
           itemCell.colSpan = 4;
           itemCell.className = "item-list";
-          itemCell.textContent = row[itemsIdx].replace(/\\n/g, "\n");
+
+          // Cleanly split items by newline (works for both \n and ↵ from Google Sheets)
+          const items = row[itemsIdx] ? row[itemsIdx].split(/\\n|↵/) : [];
+          itemCell.textContent = items.join("\n");
 
           itemRow.appendChild(itemCell);
 
-          // Toggle item row
+          // Toggle visibility on click
           driveRow.addEventListener('click', () => {
             itemRow.style.display = itemRow.style.display === 'table-row' ? 'none' : 'table-row';
           });
