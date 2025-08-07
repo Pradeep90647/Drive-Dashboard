@@ -1,76 +1,27 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>📦 External Drive Dashboard</title>
+  <title>External Drive Dashboard</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 30px;
-      background-color: #f9f9f9;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    table {
-      border-collapse: collapse;
-      margin: auto;
-      width: 95%;
-      background-color: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 12px 15px;
-      text-align: center;
-    }
-    th {
-      background-color: #4CAF50;
-      color: white;
-    }
-    tr:nth-child(even) { background-color: #f2f2f2; }
-    tr:hover { background-color: #e8f5e9; }
-
-    .sub-item {
-      font-style: italic;
-      color: #555;
-      background-color: #f7f7f7;
-      text-align: left;
-    }
-
-    .folder-icon {
-      margin-right: 6px;
-      color: #4CAF50;
-    }
-
-    .progress-container {
-      width: 100px;
-      height: 10px;
-      background-color: #ddd;
-      border-radius: 5px;
-      overflow: hidden;
-      margin: auto;
-    }
-
-    .progress-bar {
-      height: 100%;
-      background-color: #4CAF50;
-    }
-
-    .highlight {
-      color: #4CAF50;
-      font-weight: bold;
-    }
+    /* Same styling as before... */
+    body { font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 30px; }
+    h1 { text-align: center; color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    th, td { padding: 12px; text-align: left; border: 1px solid #ccc; }
+    th { background-color: #4CAF50; color: white; }
+    tr.drive-row { cursor: pointer; }
+    tr.item-row { display: none; background-color: #f9f9f9; }
+    .item-list { font-style: italic; padding-left: 30px; color: #555; white-space: pre-line; }
+    .drive-name { font-weight: bold; color: #333; }
   </style>
 </head>
 <body>
-  <h1>📦 External Drive Dashboard</h1>
+  <h1>External Drive Dashboard</h1>
   <table id="driveTable">
     <thead>
       <tr>
-        <th>Drive</th>
-        <th>Items</th>
+        <th>Drive Name</th>
         <th>Free Space</th>
         <th>Total Space</th>
         <th>Last Checked</th>
@@ -82,76 +33,50 @@
   <script>
     const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSK0qK_xqHeCfTWET7uBoBoiR5-ITRLTkRx_LNJTmzmYviynJtal5Q34SHNjG7W7Ov1BvBv7NDfVLpi/pub?output=csv";
 
-    function parseSize(sizeStr) {
-      if (!sizeStr) return 0;
-      const size = parseFloat(sizeStr);
-      if (sizeStr.includes("TB")) return size * 1000;
-      return size; // GB
-    }
-
     fetch(sheetURL)
-      .then(response => response.text())
+      .then(r => r.text())
       .then(data => {
-        const rows = data.trim().split('\n').map(row => row.split(','));
+        const rows = data.trim().split('\n').map(r => r.split(','));
         const headers = rows[0];
-        const dataRows = rows.slice(1);
+        const idx = {
+          drive: headers.indexOf("Drive Name"),
+          free: headers.indexOf("Free Space"),
+          total: headers.indexOf("Total Space"),
+          checked: headers.indexOf("Last Checked"),
+          items: headers.indexOf("Items")
+        };
 
-        const tbody = document.querySelector("#driveTable tbody");
-        let lastDrive = "", lastFree = "", lastTotal = "", lastChecked = "";
+        const tbody = document.getElementById("driveTable").querySelector("tbody");
 
-        dataRows.forEach(row => {
-          const rowData = Object.fromEntries(headers.map((h, i) => [h.trim(), row[i]?.trim() || ""]));
-          const isNewDrive = rowData["Drive"] && rowData["Drive"] !== lastDrive;
+        rows.slice(1).forEach(row => {
+          const driveRow = document.createElement("tr");
+          driveRow.className = "drive-row";
+          driveRow.innerHTML = `
+            <td class="drive-name">${row[idx.drive]}</td>
+            <td>${row[idx.free]}</td>
+            <td>${row[idx.total]}</td>
+            <td>${row[idx.checked]}</td>
+          `;
 
-          const tr = document.createElement('tr');
-          const tdDrive = document.createElement('td');
-          const tdItem = document.createElement('td');
-          const tdFree = document.createElement('td');
-          const tdTotal = document.createElement('td');
-          const tdChecked = document.createElement('td');
+          const itemRow = document.createElement("tr");
+          itemRow.className = "item-row";
+          const itemCell = document.createElement("td");
+          itemCell.colSpan = 4;
+          itemCell.className = "item-list";
+          const items = row[idx.items] ? row[idx.items].split(/\r?\n/) : [];
+          itemCell.textContent = items.join("\n");
+          itemRow.appendChild(itemCell);
 
-          // Drive column
-          tdDrive.textContent = isNewDrive ? rowData["Drive"] : "";
-          tdDrive.className = isNewDrive ? "highlight" : "";
+          driveRow.onclick = () => {
+            itemRow.style.display = itemRow.style.display === "table-row" ? "none" : "table-row";
+          };
 
-          // Item with icon
-          tdItem.innerHTML = `<span class="folder-icon">📁</span><span class="sub-item">${rowData["Items"]}</span>`;
-
-          // Free space
-          tdFree.innerHTML = isNewDrive ? `<span class="highlight">${rowData["Free Space"]}</span>` : "";
-
-          // Total space + progress bar
-          if (isNewDrive) {
-            const total = parseSize(rowData["Total Space"]);
-            const free = parseSize(rowData["Free Space"]);
-            const usedPercent = total > 0 ? Math.round(((total - free) / total) * 100) : 0;
-
-            const bar = `
-              <div class="progress-container">
-                <div class="progress-bar" style="width: ${usedPercent}%"></div>
-              </div>
-              <div class="highlight">${rowData["Total Space"]}</div>
-            `;
-            tdTotal.innerHTML = bar;
-          }
-
-          // Last Checked
-          tdChecked.innerHTML = isNewDrive ? `<span class="highlight">${rowData["Last Checked"]}</span>` : "";
-
-          tr.append(tdDrive, tdItem, tdFree, tdTotal, tdChecked);
-          tbody.appendChild(tr);
-
-          // update last values
-          if (isNewDrive) {
-            lastDrive = rowData["Drive"];
-            lastFree = rowData["Free Space"];
-            lastTotal = rowData["Total Space"];
-            lastChecked = rowData["Last Checked"];
-          }
+          tbody.appendChild(driveRow);
+          tbody.appendChild(itemRow);
         });
       })
-      .catch(error => {
-        document.body.innerHTML += `<p style="color:red; text-align:center;">Failed to load data: ${error}</p>`;
+      .catch(e => {
+        document.body.innerHTML += `<p style="color:red; text-align:center;">Error loading data: ${e}</p>`;
       });
   </script>
 </body>
