@@ -1,83 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>External Drive Dashboard</title>
+  <meta charset="UTF-8" />
+  <title>External Drive Dashboard (Reliable)</title>
   <style>
-    /* Same styling as before... */
-    body { font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 30px; }
-    h1 { text-align: center; color: #333; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    th, td { padding: 12px; text-align: left; border: 1px solid #ccc; }
-    th { background-color: #4CAF50; color: white; }
-    tr.drive-row { cursor: pointer; }
-    tr.item-row { display: none; background-color: #f9f9f9; }
-    .item-list { font-style: italic; padding-left: 30px; color: #555; white-space: pre-line; }
-    .drive-name { font-weight: bold; color: #333; }
+    body { font-family: Arial; background: #f4f4f4; padding: 30px; }
+    h1 { text-align: center; }
+    table { width: 100%; border-collapse: collapse; background: #fff; margin-top: 20px; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
+    th, td { padding: 12px; border: 1px solid #ccc; }
+    th { background: #4CAF50; color: white; }
+    .items { white-space: pre-line; color: #555; font-style: italic; }
   </style>
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+    google.charts.load('current', { packages: ['table'] });
+    google.charts.setOnLoadCallback(drawDashboard);
+
+    function drawDashboard() {
+      const query = new google.visualization.Query(
+        'https://docs.google.com/spreadsheets/d/1Y75aoCzK-ln1RefEAFFcusuB5qNabRu_dQ1VsbZEE1k/gviz/tq?sheet=Sheet1'
+      );
+      query.send(handleQueryResponse);
+    }
+
+    function handleQueryResponse(response) {
+      if (response.isError()) {
+        document.body.innerHTML += "<p style='color:red;'>Error: " + response.getMessage() + "</p>";
+        return;
+      }
+      const data = response.getDataTable();
+
+      let html = `<table>
+        <tr>
+          <th>Drive Name</th>
+          <th>Free Space</th>
+          <th>Total Space</th>
+          <th>Last Checked</th>
+          <th>Items</th>
+        </tr>`;
+
+      for (let i = 0; i < data.getNumberOfRows(); i++) {
+        html += `<tr>
+          <td>${data.getValue(i, 0) || ''}</td>
+          <td>${data.getValue(i, 1) || ''}</td>
+          <td>${data.getValue(i, 2) || ''}</td>
+          <td>${data.getValue(i, 3) || ''}</td>
+          <td class="items">${data.getValue(i, 4) || ''}</td>
+        </tr>`;
+      }
+      html += '</table>';
+      document.body.innerHTML += html;
+    }
+  </script>
 </head>
 <body>
   <h1>External Drive Dashboard</h1>
-  <table id="driveTable">
-    <thead>
-      <tr>
-        <th>Drive Name</th>
-        <th>Free Space</th>
-        <th>Total Space</th>
-        <th>Last Checked</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <script>
-    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSK0qK_xqHeCfTWET7uBoBoiR5-ITRLTkRx_LNJTmzmYviynJtal5Q34SHNjG7W7Ov1BvBv7NDfVLpi/pub?output=csv";
-
-    fetch(sheetURL)
-      .then(r => r.text())
-      .then(data => {
-        const rows = data.trim().split('\n').map(r => r.split(','));
-        const headers = rows[0];
-        const idx = {
-          drive: headers.indexOf("Drive Name"),
-          free: headers.indexOf("Free Space"),
-          total: headers.indexOf("Total Space"),
-          checked: headers.indexOf("Last Checked"),
-          items: headers.indexOf("Items")
-        };
-
-        const tbody = document.getElementById("driveTable").querySelector("tbody");
-
-        rows.slice(1).forEach(row => {
-          const driveRow = document.createElement("tr");
-          driveRow.className = "drive-row";
-          driveRow.innerHTML = `
-            <td class="drive-name">${row[idx.drive]}</td>
-            <td>${row[idx.free]}</td>
-            <td>${row[idx.total]}</td>
-            <td>${row[idx.checked]}</td>
-          `;
-
-          const itemRow = document.createElement("tr");
-          itemRow.className = "item-row";
-          const itemCell = document.createElement("td");
-          itemCell.colSpan = 4;
-          itemCell.className = "item-list";
-          const items = row[idx.items] ? row[idx.items].split(/\r?\n/) : [];
-          itemCell.textContent = items.join("\n");
-          itemRow.appendChild(itemCell);
-
-          driveRow.onclick = () => {
-            itemRow.style.display = itemRow.style.display === "table-row" ? "none" : "table-row";
-          };
-
-          tbody.appendChild(driveRow);
-          tbody.appendChild(itemRow);
-        });
-      })
-      .catch(e => {
-        document.body.innerHTML += `<p style="color:red; text-align:center;">Error loading data: ${e}</p>`;
-      });
-  </script>
 </body>
 </html>
